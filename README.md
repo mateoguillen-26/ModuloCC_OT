@@ -16,6 +16,8 @@ Aplicativo web para registrar, compartir y seguir en tiempo real las órdenes de
     cantidad y tamaño de diamantes.
   - *Anillo de compromiso*: talla, material, gema principal (forma, peso, color, pureza),
     certificado de autenticidad (laboratorio y código) y diamantes secundarios (cantidad y peso).
+  - *Joya personalizada*: tipo de joya (dije, collar, aretes, pulsera…), diseño, material, medidas,
+    peso estimado, acabado, grabado, lista de gemas (tipo, forma, cantidad, peso, certificado) e instrucciones.
   - *Compostura / mantenimiento*: instrucciones libres, fotos del estado actual y registro de materiales recibidos.
 - **Fotografías** de referencia para la producción, estado actual del artículo y pieza terminada.
 - **Valor a cobrar**: valor fijo, o desglosado (gramos × costo por gramo + costo de gemas).
@@ -40,8 +42,8 @@ npm start
 
 Abra `http://localhost:3000`. Primero registre los asesores en la pestaña **Asesores**.
 
-**Datos de prueba**: `npm run seed` carga 3 asesores, 5 clientes y 6 órdenes con fotos ilustrativas,
-pagos e historial (solo si la base está vacía; `npm run seed -- --forzar` los agrega igualmente).
+**Datos de prueba**: `npm run seed` carga 3 asesores, 6 clientes y 7 órdenes (incluye una joya personalizada) con fotos ilustrativas,
+pagos e historial. Puede ejecutarse de nuevo: solo agrega los registros que falten.
 Las fechas se calculan a partir del día en que se ejecuta, para mostrar órdenes vencidas, en víspera y próximas.
 
 **Colores de entrega** en el tablero (según la fecha ofrecida al cliente): rojo = vencida,

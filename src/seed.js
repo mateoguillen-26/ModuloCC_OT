@@ -1,6 +1,6 @@
-// Carga datos de prueba: 3 asesores, 5 clientes y 5 órdenes con fotos, pagos e historial.
-// Uso: npm run seed            (solo si no hay órdenes registradas)
-//      npm run seed -- --forzar (agrega los datos aunque ya existan órdenes)
+// Carga datos de prueba: asesores, clientes y órdenes con fotos, pagos e historial.
+// Uso: npm run seed — agrega solo lo que falta (asesores por nombre, clientes por correo),
+// así que puede ejecutarse de nuevo sin duplicar registros.
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
@@ -8,11 +8,6 @@ const { q, transaccion } = require('./db');
 
 const UPLOADS_DIR = process.env.UPLOADS_DIR || path.join(__dirname, '..', 'uploads');
 fs.mkdirSync(UPLOADS_DIR, { recursive: true });
-
-if (q.get('SELECT COUNT(*) AS n FROM ordenes').n > 0 && !process.argv.includes('--forzar')) {
-  console.log('Ya existen órdenes. Use "npm run seed -- --forzar" para agregar los datos de prueba de todos modos.');
-  process.exit(0);
-}
 
 // ------------------------------------------------------------ fechas relativas
 
@@ -91,6 +86,14 @@ const FOTOS = {
     `${Array.from({ length: 9 }, (_, i) => `<ellipse cx="${90 + i * 50 + (i > 4 ? 30 : 0)}" cy="${300 + (i % 2) * 6}" rx="30" ry="18" fill="none" stroke="url(#oroA)" stroke-width="9" transform="rotate(${i % 2 ? 20 : -20} ${90 + i * 50 + (i > 4 ? 30 : 0)} 300)"/>`).join('')}
      <text x="345" y="250" text-anchor="middle" font-family="Arial" font-size="20" fill="#b3261e">eslabón roto</text>`,
     'Estado actual · cadena 18k'),
+  dije: () => lienzo('#f1e6cf',
+    `<path d="M300 110 L300 150" stroke="url(#oroA)" stroke-width="6"/>
+     <circle cx="300" cy="104" r="12" fill="none" stroke="url(#oroA)" stroke-width="6"/>
+     <path d="M300 470 C 170 380 140 300 170 240 C 200 180 270 180 300 230 C 330 180 400 180 430 240 C 460 300 430 380 300 470 Z"
+       fill="none" stroke="url(#oroA)" stroke-width="22" stroke-linejoin="round"/>
+     <text x="300" y="345" text-anchor="middle" font-family="Brush Script MT, cursive" font-size="72" fill="#9c7415">M&amp;J</text>
+     ${diamante(300, 232, 16)}`,
+    'Referencia · dije corazón personalizado'),
   anilloPulido: () => lienzo('#efe3c4',
     `${aro(300, 300, 140, 140, 30, 'oroA')}
      ${[[200, 170], [410, 200], [420, 380], [180, 400]].map(([x, y]) => `<path d="M${x} ${y - 16} L${x + 4} ${y - 4} L${x + 16} ${y} L${x + 4} ${y + 4} L${x} ${y + 16} L${x - 4} ${y + 4} L${x - 16} ${y} L${x - 4} ${y - 4} Z" fill="#fff" opacity=".9"/>`).join('')}`,
@@ -190,6 +193,23 @@ const ORDENES = [
   },
 ];
 
+ORDENES.push({
+  cliente: { nombre: 'Mariana Jaramillo', telefono: '0985556677', email: 'mariana.j@correo.test', tipo_evento: 'aniversario', fecha_evento: dia(30), notas: 'Regalo de aniversario, entregar en estuche.' },
+  asesor: 2, tipo: 'fabricacion', subtipo: 'personalizada', hastaEstado: 'enviado_taller', creada: -6, taller: 8, cliente_dias: 12,
+  detalles: {
+    tipo_joya: 'Dije', descripcion: 'Dije corazón calado con iniciales M&J', material: 'Oro amarillo 18k',
+    medidas: '22 × 20 mm, cadena 45 cm', peso_estimado: '4.5', acabado: 'Pulido brillante', grabado: '10 años · 15.10.2016',
+    gemas: [
+      { tipo: 'Diamante', forma: 'Redondo brillante', cantidad: '1', peso: '0.10', certificado: '' },
+      { tipo: 'Zafiro azul', forma: 'Redondo brillante', cantidad: '6', peso: '0.12', certificado: '' },
+    ],
+    instrucciones: 'Iniciales en letra cursiva. Grabado al reverso del corazón. Incluir cadena tipo veneciana 45 cm.',
+  },
+  precio: { precio_modo: 'desglosado', gramos: 6.2, costo_gramo: 88, costo_gemas: 260 },
+  pagos: [{ dias: -6, forma: 'transferencia', monto: 400, referencia: 'TRX-470031' }],
+  fotos: [['referencia', 'dije']],
+});
+
 // Segunda orden de Patricia (historial de servicios previos).
 const ORDEN_PREVIA_PATRICIA = {
   asesor: 2, tipo: 'fabricacion', subtipo: 'compromiso', hastaEstado: 'entregado', creada: -300, taller: -285, cliente_dias: -280,
@@ -250,10 +270,14 @@ function crearOrden(clienteId, asesorId, o) {
   return id;
 }
 
+let nuevas = 0;
 transaccion(() => {
-  const asesorIds = ASESORES.map((a) => Number(q.run('INSERT INTO asesores (nombre, telefono, email) VALUES (?, ?, ?)', a.nombre, a.telefono, a.email).lastInsertRowid));
+  const asesorIds = ASESORES.map((a) => q.get('SELECT id FROM asesores WHERE nombre = ?', a.nombre)?.id
+    ?? Number(q.run('INSERT INTO asesores (nombre, telefono, email) VALUES (?, ?, ?)', a.nombre, a.telefono, a.email).lastInsertRowid));
   for (const o of ORDENES) {
     const c = o.cliente;
+    if (q.get('SELECT 1 FROM clientes WHERE email = ?', c.email)) continue;
+    nuevas++;
     const clienteId = Number(q.run(
       `INSERT INTO clientes (nombre, telefono, email, tipo_evento, fecha_evento, notas, creado) VALUES (?, ?, ?, ?, ?, ?, ?)`,
       c.nombre, c.telefono, c.email, c.tipo_evento, c.fecha_evento, c.notas || null, momento(o.creada, '09:00')).lastInsertRowid);
@@ -262,4 +286,6 @@ transaccion(() => {
   }
 });
 
-console.log(`Datos de prueba cargados: ${ASESORES.length} asesores, ${ORDENES.length} clientes, ${ORDENES.length + 1} órdenes con fotos y pagos.`);
+console.log(nuevas
+  ? `Datos de prueba agregados: ${nuevas} cliente(s) nuevo(s) con sus órdenes, fotos y pagos.`
+  : 'Los datos de prueba ya estaban cargados; no se agregó nada.');

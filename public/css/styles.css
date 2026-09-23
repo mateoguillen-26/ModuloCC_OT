@@ -199,6 +199,7 @@ tr.fila-vispera .fecha-u { animation: latido 1.6s ease-in-out infinite; }
 .modo label:has(input:checked) { background: var(--oro); color: #fff; }
 
 .fila-material { display: grid; grid-template-columns: 2fr 1fr 1fr 2fr auto; gap: 8px; margin-bottom: 8px; align-items: end; }
+.fila-gema { display: grid; grid-template-columns: 1.4fr 1.4fr 1fr 1fr 1.6fr auto; gap: 8px; margin-bottom: 8px; align-items: end; }
 
 /* ---------- varios ---------- */
 #toasts { position: fixed; right: 20px; bottom: 20px; display: flex; flex-direction: column; gap: 8px; z-index: 50; }
@@ -223,7 +224,7 @@ tr.fila-vispera .fecha-u { animation: latido 1.6s ease-in-out infinite; }
   .barra nav { order: 3; flex-basis: 100%; }
   .g2, .g3, .g4, .filtros, .totales { grid-template-columns: minmax(0, 1fr); }
   .span2 { grid-column: auto; }
-  .fila-material { grid-template-columns: 1fr 1fr; }
+  .fila-material, .fila-gema { grid-template-columns: 1fr 1fr; }
   .dl { grid-template-columns: 120px 1fr; }
   .pasos .paso span { display: none; }
 }

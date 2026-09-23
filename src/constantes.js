@@ -20,7 +20,7 @@ const TIPOS_ORDEN = [
 const TIPOS_FABRICACION = [
   { id: 'boda', nombre: 'Anillos de boda' },
   { id: 'compromiso', nombre: 'Anillo de compromiso' },
-  { id: 'otro', nombre: 'Otra pieza' },
+  { id: 'personalizada', nombre: 'Joya personalizada' },
 ];
 
 const FORMAS_PAGO = [
@@ -37,6 +37,12 @@ const MATERIALES = [
   'Oro bicolor 18k',
   'Platino',
 ];
+
+const TIPOS_JOYA = [
+  'Anillo', 'Collar', 'Dije', 'Aretes', 'Pulsera', 'Esclava', 'Cadena', 'Gemelos', 'Broche', 'Otra',
+];
+
+const ACABADOS = ['Pulido brillante', 'Mate / satinado', 'Arenado', 'Martillado', 'Diamantado', 'Rodinado'];
 
 const FORMAS_GEMA = [
   'Redondo brillante', 'Princesa', 'Óvalo', 'Esmeralda', 'Cojín', 'Pera',
@@ -62,6 +68,6 @@ const MENSAJES_ESTADO = {
 };
 
 module.exports = {
-  ESTADOS, TIPOS_ORDEN, TIPOS_FABRICACION, FORMAS_PAGO, MATERIALES,
+  ESTADOS, TIPOS_ORDEN, TIPOS_FABRICACION, TIPOS_JOYA, ACABADOS, FORMAS_PAGO, MATERIALES,
   FORMAS_GEMA, CATEGORIAS_FOTO, MENSAJES_ESTADO,
 };

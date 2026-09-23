@@ -379,12 +379,32 @@ function htmlInstrucciones(tipo, subtipo, d) {
   }
 
   if (tipo === 'fabricacion') {
+    // Joya personalizada: cualquier pieza de diseño propio (dije, collar, aretes, pulsera…).
+    const gemas = d.gemas?.length ? d.gemas : [{}];
     return `
-      <div class="grid g2">
-        ${campo('Descripción de la pieza', 'detalles.descripcion', d.descripcion)}
+      <div class="grid g4">
+        <div><label for="f-detalles-tipo_joya">Tipo de joya</label>
+          <select id="f-detalles-tipo_joya" name="detalles.tipo_joya">${opciones(CFG.TIPOS_JOYA, d.tipo_joya, '— Seleccione —')}</select></div>
+        ${campo('Nombre o descripción del diseño', 'detalles.descripcion', d.descripcion, { clase: 'span2', extra: 'placeholder="ej. Dije de iniciales entrelazadas"' })}
         ${campo('Material', 'detalles.material', d.material ?? CFG.MATERIALES[0], { lista: 'materiales' })}
+        ${campo('Medidas / talla', 'detalles.medidas', d.medidas, { extra: 'placeholder="ej. 18 × 12 mm, talla 7, cadena 45 cm"' })}
+        ${campo('Peso estimado (g)', 'detalles.peso_estimado', d.peso_estimado, { tipo: 'number' })}
+        <div><label for="f-detalles-acabado">Acabado</label>
+          <select id="f-detalles-acabado" name="detalles.acabado">${opciones(CFG.ACABADOS, d.acabado, '—')}</select></div>
+        ${campo('Grabado / personalización', 'detalles.grabado', d.grabado, { extra: 'placeholder="Nombres, fecha, iniciales…"' })}
       </div>
-      <div style="margin-top:14px">${campo('Instrucciones de fabricación', 'detalles.instrucciones', d.instrucciones, { tipo: 'textarea' })}</div>`;
+      <div class="sub">Gemas</div>
+      ${gemas.map((g, i) => `
+        <div class="fila-gema">
+          ${campo('Gema', `detalles.gemas.${i}.tipo`, g.tipo, { extra: 'placeholder="Diamante, zafiro…"' })}
+          ${campo('Forma', `detalles.gemas.${i}.forma`, g.forma, { lista: 'formas' })}
+          ${campo('Cantidad', `detalles.gemas.${i}.cantidad`, g.cantidad, { tipo: 'number' })}
+          ${campo('Peso total (ct)', `detalles.gemas.${i}.peso`, g.peso, { tipo: 'number' })}
+          ${campo('Certificado', `detalles.gemas.${i}.certificado`, g.certificado, { extra: 'placeholder="Lab. y código"' })}
+          <button type="button" class="btn btn-chico btn-peligro" data-quitar-gema="${i}" title="Quitar">✕</button>
+        </div>`).join('')}
+      <p><button type="button" class="btn btn-chico" id="agregar-gema">+ Agregar gema</button></p>
+      ${campo('Instrucciones de fabricación', 'detalles.instrucciones', d.instrucciones, { tipo: 'textarea', extra: 'rows="4" placeholder="Detalles del diseño, referencias, tipo de cierre, engaste…"' })}`;
   }
 
   // Compostura o mantenimiento
@@ -577,6 +597,12 @@ async function vistaFormOrden(id, clientePre) {
     } else if (t.dataset.quitarAnillo !== undefined) {
       d.anillos.splice(Number(t.dataset.quitarAnillo), 1);
       pintarInstrucciones(d);
+    } else if (t.id === 'agregar-gema') {
+      d.gemas = [...(d.gemas || []), {}];
+      pintarInstrucciones(d);
+    } else if (t.dataset.quitarGema !== undefined) {
+      d.gemas.splice(Number(t.dataset.quitarGema), 1);
+      pintarInstrucciones(d);
     } else if (t.id === 'agregar-material') {
       d.materiales = [...(d.materiales || []), {}];
       pintarInstrucciones(d);
@@ -685,8 +711,18 @@ function htmlDetalleInstrucciones(o) {
   }
 
   if (o.tipo === 'fabricacion') {
-    return `<dl class="dl">${dlFila('Pieza', e(d.descripcion))}${dlFila('Material', e(d.material))}</dl>
-      ${texto(d.instrucciones)}`;
+    const gemas = (d.gemas || []).filter((g) => g.tipo || g.cantidad || g.peso);
+    return `
+      <dl class="dl">
+        ${dlFila('Tipo de joya', e(d.tipo_joya))}${dlFila('Diseño', e(d.descripcion))}${dlFila('Material', e(d.material))}
+        ${dlFila('Medidas / talla', e(d.medidas))}${dlFila('Peso estimado', d.peso_estimado ? e(d.peso_estimado) + ' g' : '')}
+        ${dlFila('Acabado', e(d.acabado))}${dlFila('Grabado', d.grabado ? `<i>“${e(d.grabado)}”</i>` : '')}
+      </dl>
+      ${gemas.length ? `<div class="sub">Gemas</div>
+        <table><thead><tr><th>Gema</th><th>Forma</th><th class="num">Cant.</th><th class="num">Peso (ct)</th><th>Certificado</th></tr></thead><tbody>
+        ${gemas.map((g) => `<tr><td>${e(g.tipo)}</td><td>${e(g.forma)}</td><td class="num">${e(g.cantidad)}</td><td class="num">${e(g.peso)}</td><td>${e(g.certificado)}</td></tr>`).join('')}
+        </tbody></table>` : ''}
+      ${d.instrucciones ? `<div class="sub">Instrucciones de fabricación</div>${texto(d.instrucciones)}` : ''}`;
   }
 
   const mats = (d.materiales || []).filter((m) => m.descripcion || m.cantidad || m.peso);
@@ -1014,7 +1050,7 @@ function resumenDetalle(o) {
     const g = d.gema || {};
     return `${g.tipo || 'Gema'} ${g.forma || ''} ${g.peso ? g.peso + ' ct' : ''} · ${d.material || ''} · talla ${d.talla || '?'}`;
   }
-  if (o.tipo === 'fabricacion') return `${d.descripcion || ''} ${d.material ? '· ' + d.material : ''}`;
+  if (o.tipo === 'fabricacion') return [d.tipo_joya, d.descripcion, d.material].filter(Boolean).join(' · ');
   return `${d.articulo || ''} ${d.instrucciones ? '· ' + d.instrucciones.slice(0, 60) : ''}`;
 }
 

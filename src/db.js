@@ -105,6 +105,8 @@ CREATE INDEX IF NOT EXISTS ix_fotos_orden ON fotos(orden_id);
 CREATE INDEX IF NOT EXISTS ix_pagos_orden ON pagos(orden_id);
 `);
 
+db.exec(`UPDATE ordenes SET subtipo = 'personalizada' WHERE subtipo = 'otro'`);
+
 // Ejecuta fn dentro de una transacción.
 function transaccion(fn) {
   db.exec('BEGIN');
