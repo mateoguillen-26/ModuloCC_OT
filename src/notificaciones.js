@@ -17,8 +17,10 @@ const transporte = smtpConfigurado
     })
   : null;
 
+// Render y Railway publican su dirección en variables propias; PUBLIC_URL tiene prioridad.
 function urlBase() {
-  return (env.PUBLIC_URL || `http://localhost:${env.PORT || 3000}`).replace(/\/$/, '');
+  const railway = env.RAILWAY_PUBLIC_DOMAIN && `https://${env.RAILWAY_PUBLIC_DOMAIN}`;
+  return (env.PUBLIC_URL || env.RENDER_EXTERNAL_URL || railway || `http://localhost:${env.PORT || 3000}`).replace(/\/$/, '');
 }
 
 function enlaceSeguimiento(orden) {

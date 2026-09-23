@@ -1,0 +1,34 @@
+# Blueprint de Render: https://render.com/docs/blueprint-spec
+# El disco persistente guarda la base de datos SQLite y las fotos entre despliegues.
+services:
+  - type: web
+    name: ordenes-joyeria
+    runtime: node
+    plan: starter            # los discos persistentes requieren un plan de pago
+    region: oregon
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /api/config
+    disk:
+      name: datos
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: "24"
+      - key: DATA_DIR
+        value: /var/data/db
+      - key: UPLOADS_DIR
+        value: /var/data/uploads
+      - key: APP_PASSWORD
+        sync: false           # Render la pedirá al crear el servicio
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: NOMBRE_NEGOCIO
+        value: Joyería
+      - key: MONEDA
+        value: USD
+      - key: RECARGO_TARJETA
+        value: "6"
+      - key: CODIGO_PAIS
+        value: "593"

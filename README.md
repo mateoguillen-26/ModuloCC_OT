@@ -67,6 +67,24 @@ fecha de entrega (más próxima o más lejana) o por fecha de creación.
 
 ## Publicación
 
-Para que el taller, la oficina y los clientes accedan desde cualquier lugar, instale el sistema en un
-servidor o VPS con Node.js (o un servicio como Railway / Render con disco persistente), detrás de HTTPS,
-y defina `APP_PASSWORD` y `PUBLIC_URL`.
+El sistema guarda la base de datos y las fotos en disco y mantiene conexiones en vivo, por eso necesita
+un servicio con **disco persistente**. No sirve en Vercel ni en otros servicios "serverless", donde los
+archivos se borran en cada despliegue.
+
+### Render (configuración incluida en `render.yaml`)
+
+1. En [render.com](https://render.com) → **New → Blueprint** → conecte este repositorio de GitHub.
+2. Render lee `render.yaml`: crea el servicio (plan Starter) con un disco de 1 GB en `/var/data`.
+3. Cuando lo pida, escriba la contraseña del panel en `APP_PASSWORD`.
+4. Ajuste en **Environment** `NOMBRE_NEGOCIO`, `MONEDA`, `CODIGO_PAIS` y, si los usa, `SMTP_*` y `WHATSAPP_*`.
+5. (Opcional) Para cargar los datos de prueba: pestaña **Shell** → `npm run seed`.
+
+La dirección pública (`https://….onrender.com`) se detecta sola para los enlaces de seguimiento;
+si usa un dominio propio, defínalo en `PUBLIC_URL`.
+
+### Railway
+
+1. En [railway.com](https://railway.com) → **New Project → Deploy from GitHub repo** → elija este repositorio.
+2. En el servicio: **Settings → Volumes → New Volume**, montado en `/data`.
+3. En **Variables**: `DATA_DIR=/data/db`, `UPLOADS_DIR=/data/uploads`, `APP_PASSWORD=…` y las demás de `.env.example`.
+4. En **Settings → Networking → Generate Domain** para obtener la dirección pública.
