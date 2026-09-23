@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Órdenes de Trabajo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <header class="barra no-print">
+    <a class="marca" href="#/"><span class="anillo" aria-hidden="true">◯</span> <span id="nombre-negocio">Joyería</span></a>
+    <nav>
+      <a href="#/" data-nav="tablero">Órdenes</a>
+      <a href="#/clientes" data-nav="clientes">Clientes</a>
+      <a href="#/asesores" data-nav="asesores">Asesores</a>
+    </nav>
+    <span class="en-vivo" id="en-vivo" title="Conexión en tiempo real">● en vivo</span>
+    <a class="btn btn-oro" href="#/ordenes/nueva">+ Nueva orden</a>
+  </header>
+  <main id="app"><p class="cargando">Cargando…</p></main>
+  <div id="toasts" class="no-print" aria-live="polite"></div>
+  <script src="/js/app.js"></script>
+</body>
+</html>

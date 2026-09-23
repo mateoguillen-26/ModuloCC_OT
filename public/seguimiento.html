@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Seguimiento de tu orden</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+  <style>
+    main { max-width: 640px; }
+    .hero { text-align: center; padding: 24px 0 8px; }
+    .hero .anillo { font-size: 34px; }
+    .estado-grande { font-family: var(--serif); font-size: 32px; font-weight: 700; margin: 6px 0; }
+    .vertical { list-style: none; padding: 0; margin: 0; }
+    .vertical li { display: flex; gap: 12px; padding: 0 0 18px; position: relative; color: var(--suave); }
+    .vertical li::before { content: ''; flex: none; width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--linea); background: #fff; margin-top: 3px; z-index: 1; }
+    .vertical li::after { content: ''; position: absolute; left: 8px; top: 18px; bottom: 0; width: 2px; background: var(--linea); }
+    .vertical li:last-child::after { display: none; }
+    .vertical li.hecho { color: var(--tinta); }
+    .vertical li.hecho::before { background: var(--oro); border-color: var(--oro); }
+    .vertical li.hecho::after { background: var(--oro); }
+    .vertical li.actual { font-weight: 600; }
+    .vertical li.actual::before { box-shadow: 0 0 0 4px var(--oro-claro); }
+  </style>
+</head>
+<body>
+  <main id="app"><p class="cargando">Cargando…</p></main>
+  <script>
+    'use strict';
+    const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const aFecha = (s) => new Date(s.length === 10 ? s + 'T12:00:00' : s.replace(' ', 'T'));
+    const fecha = (s) => (s ? aFecha(s).toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric' }) : '');
+    const token = new URLSearchParams(location.search).get('t') || '';
+    let CFG;
+
+    async function cargar() {
+      const r = await fetch('/api/publico/' + encodeURIComponent(token));
+      if (!r.ok) {
+        document.getElementById('app').innerHTML = '<p class="vacio">No encontramos esta orden. Verifica el enlace recibido.</p>';
+        return false;
+      }
+      const o = await r.json();
+      const idx = CFG.ESTADOS.findIndex((e) => e.id === o.estado);
+      const fechas = Object.fromEntries(o.historial.map((h) => [h.estado, h.fecha]));
+      const tipo = o.tipo === 'fabricacion'
+        ? CFG.TIPOS_FABRICACION.find((t) => t.id === o.subtipo)?.nombre
+        : CFG.TIPOS_ORDEN.find((t) => t.id === o.tipo)?.nombre;
+      document.title = `Orden ${o.numero} · ${CFG.nombreNegocio}`;
+
+      document.getElementById('app').innerHTML = `
+        <div class="hero">
+          <div class="anillo">◯</div>
+          <h2>${esc(CFG.nombreNegocio)}</h2>
+          <p class="muted" style="margin:4px 0 0">Hola ${esc(o.cliente)}, este es el avance de tu orden</p>
+        </div>
+        <div class="tarjeta" style="text-align:center">
+          <div class="muted chico">Orden ${esc(o.numero)} · ${esc(tipo || '')}</div>
+          <div class="estado-grande">${esc(CFG.ESTADOS[idx]?.nombre || o.estado)}</div>
+          ${o.fecha_cliente && o.estado !== 'entregado' ? `<div class="muted">Fecha estimada de entrega: <b>${fecha(o.fecha_cliente)}</b></div>` : ''}
+          <div class="chico muted" style="margin-top:8px">● Esta página se actualiza automáticamente</div>
+        </div>
+        <div class="tarjeta">
+          <ul class="vertical">
+            ${CFG.ESTADOS.map((e, i) => `<li class="${i <= idx ? 'hecho' : ''} ${i === idx ? 'actual' : ''}">
+              <div>${esc(e.nombre)}${fechas[e.id] && i <= idx ? `<div class="chico muted">${fecha(fechas[e.id])}</div>` : ''}</div></li>`).join('')}
+          </ul>
+        </div>
+        ${o.fotos.length ? `<div class="tarjeta"><h3>Tu pieza</h3>
+          <div class="fotos">${o.fotos.map((f) => `<div class="foto"><img src="/uploads/${esc(f.archivo)}" alt="" loading="lazy"></div>`).join('')}</div></div>` : ''}
+        ${o.asesor ? `<p class="muted" style="text-align:center">Tu asesor: <b>${esc(o.asesor)}</b>
+          ${o.asesor_telefono ? ` · <a href="https://wa.me/${esc(o.asesor_telefono.replace(/\D/g, ''))}" target="_blank" rel="noopener">Escríbele</a>` : ''}</p>` : ''}`;
+      return true;
+    }
+
+    (async () => {
+      CFG = await (await fetch('/api/config')).json();
+      if (!(await cargar())) return;
+      const es = new EventSource('/api/publico/' + encodeURIComponent(token) + '/eventos');
+      es.addEventListener('orden', () => cargar());
+    })();
+  </script>
+</body>
+</html>
