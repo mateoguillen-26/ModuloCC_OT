@@ -8,7 +8,7 @@ Aplicativo web para registrar, compartir y seguir en tiempo real las órdenes de
 - **Clientes**: nombre, teléfono, correo, fecha de boda o aniversario, con **historial de servicios**
   (todas sus órdenes, totales facturados y saldo pendiente).
 - **Órdenes**: número automático (`OT-00001`), fecha de creación, fecha pedida al taller, fecha ofrecida
-  al cliente, tipo (Fabricación, Compostura, Mantenimiento) y asesor responsable.
+  al cliente, tipo (Fabricación, Compostura, Mantenimiento, Venta de stock) y asesor responsable.
 - **Estados**: Cotizado → Iniciado → Enviado a taller → Recibido en taller → En proceso →
   Enviado a oficina → Recibido en oficina → Entregado, con historial (quién, cuándo, comentario).
 - **Instrucciones según el tipo**
