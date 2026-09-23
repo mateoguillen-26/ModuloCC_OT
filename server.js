@@ -109,13 +109,15 @@ app.get('/api/config', (req, res) => {
 
 function ordenPublica(token) {
   const o = q.get(
-    `SELECT o.id, o.numero, o.tipo, o.subtipo, o.estado, o.fecha_creacion, o.fecha_cliente,
+    `SELECT o.id, o.numero, o.tipo, o.subtipo, o.estado, o.fecha_creacion, o.fecha_cliente, o.detalles,
             c.nombre AS cliente, a.nombre AS asesor, a.telefono AS asesor_telefono
        FROM ordenes o JOIN clientes c ON c.id = o.cliente_id
        LEFT JOIN asesores a ON a.id = o.asesor_id
       WHERE o.token = ?`, token);
   if (!o) return null;
   o.cliente = (o.cliente || '').split(' ')[0];
+  o.pasos = C.pasosDe(o.tipo, JSON.parse(o.detalles || '{}'));
+  delete o.detalles;
   o.asesor_telefono = noti.telefonoInternacional(o.asesor_telefono);
   o.historial = q.all('SELECT estado, fecha FROM historial WHERE orden_id = ? ORDER BY fecha, id', o.id);
   o.fotos = q.all(

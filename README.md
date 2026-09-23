@@ -1,7 +1,7 @@
 # Órdenes de Trabajo · Joyería
 
 Aplicativo web para registrar, compartir y seguir en tiempo real las órdenes de trabajo de la fábrica
-(anillos de boda, anillos de compromiso, composturas y mantenimientos).
+(anillos de boda, anillos de compromiso, joyas personalizadas, ventas de stock, composturas y mantenimientos).
 
 ## Funciones
 
@@ -18,6 +18,9 @@ Aplicativo web para registrar, compartir y seguir en tiempo real las órdenes de
     certificado de autenticidad (laboratorio y código) y diamantes secundarios (cantidad y peso).
   - *Joya personalizada*: tipo de joya (dije, collar, aretes, pulsera…), diseño, material, medidas,
     peso estimado, acabado, grabado, lista de gemas (tipo, forma, cantidad, peso, certificado) e instrucciones.
+  - *Venta de stock*: artículos del inventario (código, descripción, tipo de joya, material, talla, peso,
+    cantidad y precio) con suma automática. Si no requiere ajuste en taller, la orden solo pasa por
+    Cotizado → Iniciado → Recibido en oficina → Entregado.
   - *Compostura / mantenimiento*: instrucciones libres, fotos del estado actual y registro de materiales recibidos.
 - **Fotografías** de referencia para la producción, estado actual del artículo y pieza terminada.
 - **Valor a cobrar**: valor fijo, o desglosado (gramos × costo por gramo + costo de gemas).
@@ -42,7 +45,7 @@ npm start
 
 Abra `http://localhost:3000`. Primero registre los asesores en la pestaña **Asesores**.
 
-**Datos de prueba**: `npm run seed` carga 3 asesores, 6 clientes y 7 órdenes (incluye una joya personalizada) con fotos ilustrativas,
+**Datos de prueba**: `npm run seed` carga 3 asesores, 7 clientes y 8 órdenes (incluye una joya personalizada y una venta de stock) con fotos ilustrativas,
 pagos e historial. Puede ejecutarse de nuevo: solo agrega los registros que falten.
 Las fechas se calculan a partir del día en que se ejecuta, para mostrar órdenes vencidas, en víspera y próximas.
 

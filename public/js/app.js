@@ -37,6 +37,14 @@ const numero = (n) => (Number(n) || 0);
 
 const nombreDe = (lista, id) => CFG[lista].find((x) => x.id === id)?.nombre || id || '—';
 const badgeEstado = (id) => `<span class="badge e-${esc(id)}">${esc(nombreDe('ESTADOS', id))}</span>`;
+// Estados por los que pasa una orden (una venta sin ajustes no va al taller).
+function pasosOrden(o) {
+  const ids = o.tipo === 'venta' && !o.detalles?.requiere_ajuste ? CFG.ESTADOS_VENTA_DIRECTA : CFG.ESTADOS.map((e) => e.id);
+  return CFG.ESTADOS.filter((e) => ids.includes(e.id) || e.id === o.estado);
+}
+
+const totalArticulos = (d) => (d.articulos || []).reduce((s, a) => s + numero(a.cantidad || 1) * numero(a.precio), 0);
+
 const tipoTexto = (o) => (o.tipo === 'fabricacion' ? nombreDe('TIPOS_FABRICACION', o.subtipo) : nombreDe('TIPOS_ORDEN', o.tipo));
 
 // Nivel de cercanía de la entrega: vencida (pasó la fecha), vispera (0 a 2 días), pronto (3 a 7 días).
@@ -378,6 +386,34 @@ function htmlInstrucciones(tipo, subtipo, d) {
       <div style="margin-top:14px">${campo('Instrucciones adicionales de fabricación', 'detalles.instrucciones', d.instrucciones, { tipo: 'textarea' })}</div>`;
   }
 
+  if (tipo === 'venta') {
+    const articulos = d.articulos?.length ? d.articulos : [{ cantidad: '1' }];
+    return `
+      ${articulos.map((a, i) => `
+        <div class="bloque-anillo">
+          <div class="fila-articulo">
+            ${campo('Código', `detalles.articulos.${i}.codigo`, a.codigo, { extra: 'placeholder="ej. AC-0142"' })}
+            ${campo('Descripción', `detalles.articulos.${i}.descripcion`, a.descripcion, { extra: 'placeholder="ej. Solitario 0.30 ct"' })}
+            <div><label for="f-art-${i}-tipo">Tipo de joya</label>
+              <select id="f-art-${i}-tipo" name="detalles.articulos.${i}.tipo_joya">${opciones(CFG.TIPOS_JOYA, a.tipo_joya, '—')}</select></div>
+            ${campo('Material', `detalles.articulos.${i}.material`, a.material, { lista: 'materiales' })}
+            ${campo('Talla / medida', `detalles.articulos.${i}.talla`, a.talla)}
+            ${campo('Peso (g)', `detalles.articulos.${i}.peso`, a.peso, { tipo: 'number' })}
+            ${campo('Cantidad', `detalles.articulos.${i}.cantidad`, a.cantidad, { tipo: 'number' })}
+            ${campo('Precio unitario', `detalles.articulos.${i}.precio`, a.precio, { tipo: 'number' })}
+          </div>
+          ${articulos.length > 1 ? `<p style="margin:8px 0 0"><button type="button" class="btn btn-chico btn-peligro" data-quitar-articulo="${i}">Quitar artículo</button></p>` : ''}
+        </div>`).join('')}
+      <p style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <button type="button" class="btn btn-chico" id="agregar-articulo">+ Agregar artículo</button>
+        <span class="calculo">Suma de artículos: <b id="suma-articulos">${dinero(totalArticulos(d))}</b></span>
+        <button type="button" class="btn btn-chico" id="usar-suma">Usar como valor total</button>
+      </p>
+      <label class="check" style="margin:6px 0 12px"><input type="checkbox" name="detalles.requiere_ajuste" ${d.requiere_ajuste ? 'checked' : ''}>
+        Requiere ajuste en taller (talla, grabado, rodinado…). Si no, la orden no pasa por el taller.</label>
+      ${campo('Ajustes / observaciones de la venta', 'detalles.instrucciones', d.instrucciones, { tipo: 'textarea', extra: 'rows="3" placeholder="ej. Reducir a talla 6 y grabar una fecha"' })}`;
+  }
+
   if (tipo === 'fabricacion') {
     // Joya personalizada: cualquier pieza de diseño propio (dije, collar, aretes, pulsera…).
     const gemas = d.gemas?.length ? d.gemas : [{}];
@@ -573,9 +609,10 @@ async function vistaFormOrden(id, clientePre) {
     const subtipo = subtipoActual();
     $('#caja-subtipo').style.display = tipo === 'fabricacion' ? '' : 'none';
     const cajaEstado = $('#caja-estado-actual');
-    if (cajaEstado) cajaEstado.style.display = tipo && tipo !== 'fabricacion' ? '' : 'none';
+    if (cajaEstado) cajaEstado.style.display = ['compostura', 'mantenimiento'].includes(tipo) ? '' : 'none';
     $('#titulo-instrucciones').textContent = tipo === 'fabricacion'
       ? `Instrucciones de fabricación${subtipo ? ' · ' + nombreDe('TIPOS_FABRICACION', subtipo) : ''}`
+      : tipo === 'venta' ? 'Artículos de la venta'
       : tipo ? `Instrucciones de ${nombreDe('TIPOS_ORDEN', tipo).toLowerCase()}` : 'Instrucciones';
     $('#instrucciones').innerHTML = tipo === 'fabricacion' && !subtipo
       ? '<p class="muted">Seleccione qué se va a fabricar.</p>'
@@ -603,6 +640,17 @@ async function vistaFormOrden(id, clientePre) {
     } else if (t.dataset.quitarGema !== undefined) {
       d.gemas.splice(Number(t.dataset.quitarGema), 1);
       pintarInstrucciones(d);
+    } else if (t.id === 'agregar-articulo') {
+      d.articulos = [...(d.articulos || []), { cantidad: '1' }];
+      pintarInstrucciones(d);
+    } else if (t.dataset.quitarArticulo !== undefined) {
+      d.articulos.splice(Number(t.dataset.quitarArticulo), 1);
+      pintarInstrucciones(d);
+      sincronizarVenta();
+    } else if (t.id === 'usar-suma') {
+      form.querySelector('[name=precio_modo][value=fijo]').checked = true;
+      form.precio_fijo.value = totalArticulos(d).toFixed(2);
+      pintarPrecio();
     } else if (t.id === 'agregar-material') {
       d.materiales = [...(d.materiales || []), {}];
       pintarInstrucciones(d);
@@ -624,6 +672,21 @@ async function vistaFormOrden(id, clientePre) {
   }
   pintarPrecio();
   ['gramos', 'costo_gramo', 'costo_gemas'].forEach((n) => form[n].addEventListener('input', pintarPrecio));
+
+  // En una venta, el valor total sigue a la suma de artículos mientras no se escriba otro a mano.
+  let ultimaSuma = null;
+  function sincronizarVenta() {
+    if (tipoActual() !== 'venta') return;
+    const suma = totalArticulos(detallesActuales());
+    const destino = $('#suma-articulos');
+    if (destino) destino.textContent = dinero(suma);
+    const modoFijo = form.querySelector('[name=precio_modo]:checked').value === 'fijo';
+    if (modoFijo && (form.precio_fijo.value === '' || numero(form.precio_fijo.value) === ultimaSuma)) {
+      form.precio_fijo.value = suma ? suma.toFixed(2) : '';
+      ultimaSuma = suma;
+    }
+  }
+  $('#instrucciones').addEventListener('input', sincronizarVenta);
 
   // ---- fotos (solo al crear)
   if (!editando) {
@@ -649,7 +712,7 @@ async function vistaFormOrden(id, clientePre) {
       const res = await api(editando ? `/api/ordenes/${id}` : '/api/ordenes', { method: editando ? 'PUT' : 'POST', body: datos });
       if (!editando) {
         await subirFotos(res.id, $('#fotos-referencia').files, 'referencia');
-        if (datos.tipo !== 'fabricacion') await subirFotos(res.id, $('#fotos-estado').files, 'estado_actual');
+        if (['compostura', 'mantenimiento'].includes(datos.tipo)) await subirFotos(res.id, $('#fotos-estado').files, 'estado_actual');
       }
       toast(editando ? 'Cambios guardados' : `Orden ${res.numero} creada`);
       location.hash = `#/ordenes/${res.id}`;
@@ -710,6 +773,23 @@ function htmlDetalleInstrucciones(o) {
       ${d.instrucciones ? `<div class="sub">Instrucciones adicionales</div>${texto(d.instrucciones)}` : ''}`;
   }
 
+  if (o.tipo === 'venta') {
+    const arts = (d.articulos || []).filter((a) => a.codigo || a.descripcion || a.precio);
+    return `
+      ${arts.length ? `<div class="tabla-wrap"><table>
+        <thead><tr><th>Código</th><th>Artículo</th><th>Material</th><th>Talla</th><th class="num">Peso (g)</th><th class="num">Cant.</th>
+          <th class="num solo-oficina">P. unit.</th><th class="num solo-oficina">Subtotal</th></tr></thead>
+        <tbody>${arts.map((a) => `<tr>
+          <td>${e(a.codigo)}</td><td>${e(a.descripcion || a.tipo_joya)}${a.descripcion && a.tipo_joya ? `<div class="chico muted">${e(a.tipo_joya)}</div>` : ''}</td><td>${e(a.material)}</td>
+          <td>${e(a.talla)}</td><td class="num">${e(a.peso)}</td><td class="num">${e(a.cantidad || 1)}</td>
+          <td class="num solo-oficina">${dinero(a.precio)}</td><td class="num solo-oficina">${dinero(numero(a.cantidad || 1) * numero(a.precio))}</td>
+        </tr>`).join('')}</tbody>
+        <tfoot class="solo-oficina"><tr><td colspan="7" class="num"><b>Suma de artículos</b></td><td class="num"><b>${dinero(totalArticulos(d))}</b></td></tr></tfoot>
+      </table></div>` : '<p class="muted">No se registraron artículos.</p>'}
+      <p>${d.requiere_ajuste ? '<span class="badge e-en_proceso">Requiere ajuste en taller</span>' : '<span class="badge e-recibido_oficina">Entrega directa desde oficina</span>'}</p>
+      ${d.instrucciones ? `<div class="sub">Ajustes / observaciones</div>${texto(d.instrucciones)}` : ''}`;
+  }
+
   if (o.tipo === 'fabricacion') {
     const gemas = (d.gemas || []).filter((g) => g.tipo || g.cantidad || g.peso);
     return `
@@ -736,9 +816,9 @@ function htmlDetalleInstrucciones(o) {
 }
 
 function htmlFotos(o) {
-  const categorias = o.tipo === 'fabricacion'
-    ? CFG.CATEGORIAS_FOTO.filter((c) => c.id !== 'estado_actual')
-    : CFG.CATEGORIAS_FOTO;
+  const categorias = ['compostura', 'mantenimiento'].includes(o.tipo)
+    ? CFG.CATEGORIAS_FOTO
+    : CFG.CATEGORIAS_FOTO.filter((c) => c.id !== 'estado_actual');
   return categorias.map((c) => {
     const fotos = o.fotos.filter((f) => f.categoria === c.id);
     return `
@@ -820,8 +900,9 @@ function htmlNotificaciones(o) {
 
 async function vistaOrden(id) {
   const o = await api(`/api/ordenes/${id}`);
-  const idx = CFG.ESTADOS.findIndex((e) => e.id === o.estado);
-  const siguiente = CFG.ESTADOS[Math.min(idx + 1, CFG.ESTADOS.length - 1)].id;
+  const pasos = pasosOrden(o);
+  const idx = pasos.findIndex((e) => e.id === o.estado);
+  const siguiente = pasos[Math.min(idx + 1, pasos.length - 1)].id;
   const c = o.cliente;
   const mensajeCompartir = `Hola ${c.nombre.split(' ')[0]}, puedes seguir el avance de tu orden ${o.numero} aquí: ${o.enlace_seguimiento}`;
 
@@ -843,7 +924,7 @@ async function vistaOrden(id) {
     </div>
     <div id="aviso-cambios"></div>
 
-    <div class="pasos">${CFG.ESTADOS.map((e, i) => `<div class="paso ${i <= idx ? 'hecho' : ''} ${i === idx ? 'actual' : ''}"><span>${esc(e.nombre)}</span></div>`).join('')}</div>
+    <div class="pasos">${pasos.map((e, i) => `<div class="paso ${i <= idx ? 'hecho' : ''} ${i === idx ? 'actual' : ''}"><span>${esc(e.nombre)}</span></div>`).join('')}</div>
 
     <div class="detalle">
       <div>
@@ -861,7 +942,7 @@ async function vistaOrden(id) {
         </form>
 
         <div class="tarjeta">
-          <h2>${o.tipo === 'fabricacion' ? 'Instrucciones de fabricación' : `Instrucciones de ${esc(nombreDe('TIPOS_ORDEN', o.tipo).toLowerCase())}`}</h2>
+          <h2>${o.tipo === 'venta' ? 'Artículos vendidos' : o.tipo === 'fabricacion' ? 'Instrucciones de fabricación' : `Instrucciones de ${esc(nombreDe('TIPOS_ORDEN', o.tipo).toLowerCase())}`}</h2>
           ${htmlDetalleInstrucciones(o)}
           ${o.observaciones ? `<div class="sub">Observaciones</div><div class="instrucciones">${esc(o.observaciones)}</div>` : ''}
         </div>
@@ -1051,6 +1132,7 @@ function resumenDetalle(o) {
     return `${g.tipo || 'Gema'} ${g.forma || ''} ${g.peso ? g.peso + ' ct' : ''} · ${d.material || ''} · talla ${d.talla || '?'}`;
   }
   if (o.tipo === 'fabricacion') return [d.tipo_joya, d.descripcion, d.material].filter(Boolean).join(' · ');
+  if (o.tipo === 'venta') return (d.articulos || []).map((a) => [a.codigo, a.descripcion].filter(Boolean).join(' ')).join(', ');
   return `${d.articulo || ''} ${d.instrucciones ? '· ' + d.instrucciones.slice(0, 60) : ''}`;
 }
 

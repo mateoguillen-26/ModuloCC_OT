@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 const { q, transaccion } = require('./db');
+const { pasosDe } = require('./constantes');
 
 const UPLOADS_DIR = process.env.UPLOADS_DIR || path.join(__dirname, '..', 'uploads');
 fs.mkdirSync(UPLOADS_DIR, { recursive: true });
@@ -94,6 +95,13 @@ const FOTOS = {
      <text x="300" y="345" text-anchor="middle" font-family="Brush Script MT, cursive" font-size="72" fill="#9c7415">M&amp;J</text>
      ${diamante(300, 232, 16)}`,
     'Referencia · dije corazón personalizado'),
+  aretes: () => lienzo('#e8ecef',
+    `${[210, 390].map((x) => `
+       <circle cx="${x}" cy="170" r="14" fill="none" stroke="url(#oroB)" stroke-width="6"/>
+       <path d="M${x} 184 L${x} 230" stroke="url(#oroB)" stroke-width="5"/>
+       <path d="M${x} 230 L${x + 45} 330 L${x} 440 L${x - 45} 330 Z" fill="none" stroke="url(#oroB)" stroke-width="10" stroke-linejoin="round"/>
+       ${diamante(x, 330, 30)}`).join('')}`,
+    'Artículo en stock · aretes gota oro blanco'),
   anilloPulido: () => lienzo('#efe3c4',
     `${aro(300, 300, 140, 140, 30, 'oroA')}
      ${[[200, 170], [410, 200], [420, 380], [180, 400]].map(([x, y]) => `<path d="M${x} ${y - 16} L${x + 4} ${y - 4} L${x + 16} ${y} L${x + 4} ${y + 4} L${x} ${y + 16} L${x - 4} ${y + 4} L${x - 16} ${y} L${x - 4} ${y - 4} Z" fill="#fff" opacity=".9"/>`).join('')}`,
@@ -114,8 +122,6 @@ const ASESORES = [
   { nombre: 'Martín Salazar', telefono: '0987651234', email: 'martin@joyeria.test' },
   { nombre: 'Camila Rojas', telefono: '0998765432', email: 'camila@joyeria.test' },
 ];
-
-const ESTADOS = ['cotizado', 'iniciado', 'enviado_taller', 'recibido_taller', 'en_proceso', 'enviado_oficina', 'recibido_oficina', 'entregado'];
 
 // asesor: índice en ASESORES; hastaEstado: estado actual; los días son relativos a hoy.
 const ORDENES = [
@@ -210,6 +216,22 @@ ORDENES.push({
   fotos: [['referencia', 'dije']],
 });
 
+ORDENES.push({
+  cliente: { nombre: 'Esteban Cárdenas', telefono: '0962221100', email: 'esteban.c@correo.test', tipo_evento: 'otro', fecha_evento: dia(4), notas: 'Regalo de cumpleaños para su esposa.' },
+  asesor: 1, tipo: 'venta', hastaEstado: 'recibido_oficina', creada: -2, taller: 0, cliente_dias: 2,
+  detalles: {
+    articulos: [
+      { codigo: 'AR-0218', descripcion: 'Aretes gota con diamante 0.15 ct c/u', tipo_joya: 'Aretes', material: 'Oro blanco 18k', talla: '', peso: '3.1', cantidad: '1', precio: '890' },
+      { codigo: 'CA-0055', descripcion: 'Cadena veneciana 42 cm', tipo_joya: 'Cadena', material: 'Oro blanco 18k', talla: '42 cm', peso: '2.4', cantidad: '1', precio: '260' },
+    ],
+    requiere_ajuste: false,
+    instrucciones: 'Entregar en estuche de regalo con tarjeta.',
+  },
+  precio: { precio_modo: 'fijo', precio_fijo: 1150 },
+  pagos: [{ dias: -2, forma: 'tarjeta', monto: 1150, referencia: 'Voucher 01302' }],
+  fotos: [['referencia', 'aretes']],
+});
+
 // Segunda orden de Patricia (historial de servicios previos).
 const ORDEN_PREVIA_PATRICIA = {
   asesor: 2, tipo: 'fabricacion', subtipo: 'compromiso', hastaEstado: 'entregado', creada: -300, taller: -285, cliente_dias: -280,
@@ -248,7 +270,8 @@ function crearOrden(clienteId, asesorId, o) {
   q.run('UPDATE ordenes SET numero = ? WHERE id = ?', `OT-${String(id).padStart(5, '0')}`, id);
 
   // Historial repartido entre la fecha de creación y hoy (o la entrega).
-  const pasos = ESTADOS.slice(0, ESTADOS.indexOf(o.hastaEstado) + 1);
+  const ruta = pasosDe(o.tipo, o.detalles);
+  const pasos = ruta.slice(0, ruta.indexOf(o.hastaEstado) + 1);
   const fin = o.hastaEstado === 'entregado' ? o.cliente_dias : 0;
   pasos.forEach((estado, i) => {
     const d = Math.round(o.creada + ((fin - o.creada) * i) / Math.max(pasos.length - 1, 1));

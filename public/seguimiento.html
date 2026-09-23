@@ -42,7 +42,8 @@
         return false;
       }
       const o = await r.json();
-      const idx = CFG.ESTADOS.findIndex((e) => e.id === o.estado);
+      const estados = CFG.ESTADOS.filter((e) => (o.pasos || []).includes(e.id) || e.id === o.estado);
+      const idx = estados.findIndex((e) => e.id === o.estado);
       const fechas = Object.fromEntries(o.historial.map((h) => [h.estado, h.fecha]));
       const tipo = o.tipo === 'fabricacion'
         ? CFG.TIPOS_FABRICACION.find((t) => t.id === o.subtipo)?.nombre
@@ -57,13 +58,13 @@
         </div>
         <div class="tarjeta" style="text-align:center">
           <div class="muted chico">Orden ${esc(o.numero)} · ${esc(tipo || '')}</div>
-          <div class="estado-grande">${esc(CFG.ESTADOS[idx]?.nombre || o.estado)}</div>
+          <div class="estado-grande">${esc(estados[idx]?.nombre || o.estado)}</div>
           ${o.fecha_cliente && o.estado !== 'entregado' ? `<div class="muted">Fecha estimada de entrega: <b>${fecha(o.fecha_cliente)}</b></div>` : ''}
           <div class="chico muted" style="margin-top:8px">● Esta página se actualiza automáticamente</div>
         </div>
         <div class="tarjeta">
           <ul class="vertical">
-            ${CFG.ESTADOS.map((e, i) => `<li class="${i <= idx ? 'hecho' : ''} ${i === idx ? 'actual' : ''}">
+            ${estados.map((e, i) => `<li class="${i <= idx ? 'hecho' : ''} ${i === idx ? 'actual' : ''}">
               <div>${esc(e.nombre)}${fechas[e.id] && i <= idx ? `<div class="chico muted">${fecha(fechas[e.id])}</div>` : ''}</div></li>`).join('')}
           </ul>
         </div>

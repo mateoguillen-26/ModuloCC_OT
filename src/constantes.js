@@ -15,7 +15,15 @@ const TIPOS_ORDEN = [
   { id: 'fabricacion', nombre: 'Fabricación' },
   { id: 'compostura', nombre: 'Compostura' },
   { id: 'mantenimiento', nombre: 'Mantenimiento' },
+  { id: 'venta', nombre: 'Venta de stock' },
 ];
+
+// Una venta de stock sin ajustes no pasa por el taller.
+const ESTADOS_VENTA_DIRECTA = ['cotizado', 'iniciado', 'recibido_oficina', 'entregado'];
+
+function pasosDe(tipo, detalles) {
+  return tipo === 'venta' && !detalles?.requiere_ajuste ? ESTADOS_VENTA_DIRECTA : ESTADOS.map((e) => e.id);
+}
 
 const TIPOS_FABRICACION = [
   { id: 'boda', nombre: 'Anillos de boda' },
@@ -68,6 +76,7 @@ const MENSAJES_ESTADO = {
 };
 
 module.exports = {
+  ESTADOS_VENTA_DIRECTA, pasosDe,
   ESTADOS, TIPOS_ORDEN, TIPOS_FABRICACION, TIPOS_JOYA, ACABADOS, FORMAS_PAGO, MATERIALES,
   FORMAS_GEMA, CATEGORIAS_FOTO, MENSAJES_ESTADO,
 };
